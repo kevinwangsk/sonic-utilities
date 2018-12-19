@@ -1091,12 +1091,42 @@ def syseeprom(verbose):
 @click.option('--verbose', is_flag=True, help="Enable verbose output")
 def psustatus(index, verbose):
     """Show PSU status information"""
-    cmd = "sudo psuutil status"
+    db = SonicV2Connector(host="127.0.0.1")
+    db.connect(db.STATE_DB)
 
-    if index >= 0:
-        cmd += " -i {}".format(index)
+    # Currently set chassis_num to 1, need to improve it once new platform API is implemented
+    chassis_num = 1
+    chassis_name = "chassis {}".format(chassis_num)
+    num_psus = db.get(db.STATE_DB, 'CHASSIS_INFO|{}'.format(chassis_name), 'num_psus')
+    if not num_psus:
+        click.echo("Error! Failed to get the number of PSUs!")
+        return
+    supported_psu = range(1, int(num_psus) + 1)
+    if (index < 0):
+        psu_ids = supported_psu
+    else:
+        psu_ids = [index]
 
-    run_command(cmd, display_cmd=verbose)
+    header = ['PSU', 'Status']
+    status_table = []
+
+    for psu in psu_ids:
+        msg = ""
+        psu_name = "PSU {}".format(psu)
+        if psu not in supported_psu:
+            click.echo("Error! The {} is not available on the platform.\n" \
+                       "Number of supported PSU - {}.".format(psu_name, num_psus))
+            continue
+        presence = db.get(db.STATE_DB, 'PSU_INFO|{}'.format(psu_name), 'presence')
+        if presence == 'true':
+            oper_status = db.get(db.STATE_DB, 'PSU_INFO|{}'.format(psu_name), 'status')
+            msg = 'OK' if oper_status == 'true' else "NOT OK"
+        else:
+            msg = 'NOT PRESENT'
+        status_table.append([psu_name, msg])
+
+    if status_table:
+        click.echo(tabulate(status_table, header, tablefmt="simple"))
 
 #
 # 'logging' command ("show logging")
