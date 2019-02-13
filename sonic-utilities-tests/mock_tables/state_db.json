@@ -1,0 +1,11 @@
+{
+    "PSU_INFO|PSU 1": {
+        "presence": "true",
+        "status": "true"
+    },
+    "PSU_INFO|PSU 2": {
+        "presence": "true",
+        "status": "true"
+    }
+}
+
